@@ -3,12 +3,17 @@
 import gc
 import numpy as np
 from tifffile import imread
+from PIL import Image
+import imageio
 from metadata import MetaData
 import timeit
 import time
 import threading
 import multiprocessing
 import concurrent
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 
 # TODO: parallel computing test of: threading, joblib, numba, asyncio, ...
 # TODO: reading/writing/caching: numpy.memmap, pil, ...
@@ -17,8 +22,8 @@ if __name__ == '__main__':
     num_proc = round(0.5 * multiprocessing.cpu_count())
     num_proj_used = 200
     # Metadata
-    scan_path = '/asap3/petra3/gpfs/p05/2020/data/11008476/raw/hzb_108_F6-32900wh/'
-    # scan_path = '/asap3/petra3/gpfs/p07/2020/data/11010172/raw/swerim_21_12_oh_a/'
+    # scan_path = '/asap3/petra3/gpfs/p05/2020/data/11008476/raw/hzb_108_F6-32900wh/'
+    scan_path = '/asap3/petra3/gpfs/p07/2020/data/11010172/raw/swerim_21_12_oh_a/'
     md = MetaData(scan_path)
     num_proj_found = md.num_proj_found
     im_shape_raw = md.im_shape
@@ -108,6 +113,20 @@ if __name__ == '__main__':
             # print(np.shape(res))
             return res
 
+    def read_proj_concurrent_thread_pil(max_workers=36, chunksize=1):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            res = []
+            for im in executor.map(Image.open, full_proj_name_proc, chunksize=chunksize):
+                res.append(im.getdata())
+            return res
+
+    def read_proj_concurrent_thread_imageio(max_workers=36, chunksize=1):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            res = []
+            for im in executor.map(imageio.imread, full_proj_name_proc, chunksize=chunksize):
+                res.append(im)
+            return res
+
 
     def read_proj_threading():
         for fn in full_proj_name_proc:
@@ -131,6 +150,7 @@ if __name__ == '__main__':
 
 
     def time_it3(func, repeat=1, *args, **kwargs):
+        print('time_it3 start')
         name = func.__name__
         string = ''
         for s in kwargs:
@@ -148,13 +168,47 @@ if __name__ == '__main__':
         rshape = np.shape(res)
         print(f'type: {rtype}, length: {rlen}, shape: {rshape}')
 
+        im0 = res[0]
+        im1 = res[-1]
+        print(f'array equal: {np.array_equal(im0, im1)}')
+        # cmap = 'gray'
+        # plt.figure()
+        # ax0 = plt.subplot(211)
+        # ax0.imshow(im0, cmap=cmap, interpolation='nearest')
+        # ax1 = plt.subplot(212)
+        # ax1.imshow(im1, cmap=cmap, interpolation='nearest')
+        # plt.show()
+        # plt.draw()
+        tend = time.time()
+        print(f'time_it3 finished: {tend - tstart}')
+
+
+    print('\n')
+    print('Start benchmarking')
+    print("Concurrent reading using concurrent.threading")
+    # time_it(read_proj_concurrent_thread)
+    # time_it2(read_proj_concurrent_thread, 18, 1)
+    time_it3(read_proj_concurrent_thread, repeat=1, max_workers=9, chunksize=1)
+    time_it3(read_proj_concurrent_thread_pil, repeat=1, max_workers=9, chunksize=1)
+    time_it3(read_proj_concurrent_thread_imageio, repeat=1, max_workers=9, chunksize=1)
+    # time_it3(read_proj_concurrent_thread, repeat=1, max_workers=18, chunksize=1)
+    # time_it2(read_proj_concurrent_thread, 36, 1)
+    # time_it2(read_proj_concurrent_thread, 72, 1)
+    # time_it2(read_proj_concurrent_thread, 18, 1)
+    # time_it2(read_proj_concurrent_thread, 18, 10)
+    # time_it2(read_proj_concurrent_thread, 18, 20)
+    # time_it2(read_proj_concurrent_thread, 18, 40)
+    # time_it2(read_proj_concurrent_thread, 36, 10)
+    # time_it2(read_proj_concurrent_thread, 36, 20)
+    # time_it2(read_proj_concurrent_thread, 36, 40)
+
+
 
     if 0:
         print("Non-concurrent reading of images into different dimensions of pre-allocated arrays")
-        time_it(read_proj_into_dim1, repeat=3)
-        time_it(read_proj_into_dim2, repeat=3)
+        time_it(read_proj_into_dim1, repeat=1)
+        time_it(read_proj_into_dim2, repeat=1)
         time_it(read_proj_into_dim3, repeat=1)
-
         # Concurrent reading
         print('Open pool')
         start = time.time()
@@ -167,18 +221,5 @@ if __name__ == '__main__':
         time_it(read_proj_multiprocessing_imap)
         pool_mp.close()
 
-    print("Concurrent reading using concurrent.threading")
-    # time_it(read_proj_concurrent_thread)
-    # time_it2(read_proj_concurrent_thread, 18, 1)
-    time_it3(read_proj_concurrent_thread, repeat=1, max_workers=18, chunksize=1)
-    # time_it2(read_proj_concurrent_thread, 36, 1)
-    # time_it2(read_proj_concurrent_thread, 72, 1)
-    # time_it2(read_proj_concurrent_thread, 18, 1)
-    # time_it2(read_proj_concurrent_thread, 18, 10)
-    # time_it2(read_proj_concurrent_thread, 18, 20)
-    # time_it2(read_proj_concurrent_thread, 18, 40)
-    # time_it2(read_proj_concurrent_thread, 36, 10)
-    # time_it2(read_proj_concurrent_thread, 36, 20)
-    # time_it2(read_proj_concurrent_thread, 36, 40)
 
     print("Finished")

@@ -5,10 +5,12 @@ from warnings import warn
 import glob
 import h5py
 import numpy as np
-from tifffile import TiffFile
+from tifffile import TiffFile, imread
 
 
 class MetaData:
+    """Retrieve metadata from scan path."""
+
     def __init__(self, scan_path: str):
         if not scan_path:
             raise ValueError('scan_path must not be empty')
@@ -114,6 +116,9 @@ class MetaData:
         tif = TiffFile(fn)
         page = tif.pages[0]
         self.im_shape = page.shape
+        self.im_size = page.size
+        self.im_nbytes = np.dtype(page).itemsize * page.size
+        self.page = page
         self.im_dtype = page.dtype
         if self.im_dtype is not np.dtype('uint16'):
             raise TypeError(f'image data type ({self.im_dtype}) is not uint16')
@@ -129,6 +134,15 @@ class MetaData:
 
     def __repr__(self):
         return "{}('{}')".format(self.__class__.__name__, self.scan_path)
+
+    def imread_dark(self, num=0):
+        return imread(self.full_dark_name[num])
+
+    def imread_ref(self, num=0):
+        return imread(self.full_ref_name[num])
+
+    def imread_proj(self, num=0):
+        return imread(self.full_proj_name[num])
 
     def info(self):
         """Print general scan information."""
@@ -146,7 +160,9 @@ class MetaData:
               'num_ref_found',
               'num_dark_found',
               'im_shape',
+              'im_size',
               'im_dtype',
+              'im_nbytes',
               'proj_shape',
               ]
         for name in k0:
@@ -171,7 +187,34 @@ class MetaData:
             print(f'image: key, name, time = {key}, {name}, {time}')
 
 
+class MetaDataSets(MetaData):
+    """Default constructors for exemplary metadata sets."""
+
+    @classmethod
+    def p05_kit_h5log(cls):
+        return cls('/asap3/petra3/gpfs/p05/2020/data/11008476/raw/hzb_108_F6-32900wh/')
+
+    @classmethod
+    def p05_ccd_h5log(cls):
+        return cls('/asap3/petra3/gpfs/p05/2020/data/11008672/raw/bkk_006_goldfish_inoculate')
+
+    @classmethod
+    def p07_ximea50mpix_imlog(cls):
+        return cls('/asap3/petra3/gpfs/p07/2020/data/11010172/raw/swerim_21_12_oh_a/')
+
+    @classmethod
+    def hnee19(cls):
+        return cls('/asap3/petra3/gpfs/p05/2018/data/11004450/raw/hnee19_pappel_oppositeWood_000')
+
+    @classmethod
+    def hnee21(cls):
+        return cls('/asap3/petra3/gpfs/p05/2018/data/11004450/raw/hnee21_pappel_oppositeWood_000')
+
+
 if __name__ == '__main__':
-    md1 = MetaData('/asap3/petra3/gpfs/p05/2020/data/11008476/raw/hzb_108_F6-32900wh/')
-    md2 = MetaData('/asap3/petra3/gpfs/p07/2020/data/11010172/raw/swerim_21_12_oh_a/')
-    md1.info()
+    print('Instantiate class methods:')
+    for key, val in MetaDataSets.__dict__.items():
+        if type(val) is classmethod:
+            print(getattr(MetaDataSets, key)())
+    md = MetaDataSets.p07_ximea50mpix_imlog()
+    print('End')

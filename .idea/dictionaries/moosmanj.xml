@@ -3,10 +3,16 @@
     <words>
       <w>beamtime</w>
       <w>chunksize</w>
+      <w>cmap</w>
+      <w>colorbar</w>
       <w>dtype</w>
+      <w>filt</w>
+      <w>gpfs</w>
       <w>imap</w>
+      <w>nbytes</w>
       <w>piezo</w>
       <w>proj</w>
+      <w>ximea</w>
     </words>
   </dictionary>
 </component>

@@ -1,5 +1,5 @@
 import numpy as np
-
+from tifffile import imread
 
 def indexing(array: np.ndarray, *ind):
     """Fancy indexing with relative, absolute and negative indices.
@@ -62,5 +62,25 @@ def indexing(array: np.ndarray, *ind):
     return array[index_range]
 
 
+def info(im):
+    """Print image (array) information."""
+
+    tp = type(im)
+    print(f'type: {tp}')
+    if tp is np.ndarray:
+        print(f'shape: {im.shape}')
+        print(f'size: {im.size}')
+        print(f'dtype: {im.dtype}')
+        nb = im.nbytes / 1024**2
+        print(f'nbytes: {nb} MiB')
+        im_min = im.min()
+        im_max = im.max()
+        dx = im_max - im_min
+        print(f'min, max, max-min: {im_min}, {im_max}, {dx}')
+        print(f'mean, std: {im.mean()}, {im.std()}')
+
+
 if __name__ == '__main__':
     indexing(np.arange(10), np.arange(1, 9, 2))
+    im = imread('/asap3/petra3/gpfs/p05/2020/data/11008476/raw/hzb_108_F6-32900wh/hzb_108_F6-32900wh_000030_img.tif')
+    info(im)
